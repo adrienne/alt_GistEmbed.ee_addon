@@ -38,7 +38,6 @@ require_once PATH_THIRD .'alt_gistembed/MarkdownExtended/markdown_extended.php';
 
 class Alt_gistembed {
 
-	public $return_data;
     public $rawurl  = 'https://raw.github.com/gist/%s';
     public $jsonurl = 'https://gist.github.com/%s.json';
     public $params  = array();
