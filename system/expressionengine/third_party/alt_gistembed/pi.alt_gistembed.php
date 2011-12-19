@@ -64,8 +64,6 @@ class Alt_gistembed {
         $metadata  = file_get_contents(sprintf($this->jsonurl, $this->params['id'])); 
         $metadata = json_decode($metadata,TRUE);
         
-        var_dump($metadata);
-        
         $giststring = '';
        
         if(TRUE == $this->params['markdown']) {
