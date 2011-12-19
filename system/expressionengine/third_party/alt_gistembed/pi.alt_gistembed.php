@@ -39,87 +39,98 @@ require_once PATH_THIRD .'alt_gistembed/MarkdownExtended/markdown_extended.php';
 class Alt_gistembed {
 
 	public $return_data;
-    public $rawurl = 'https://raw.github.com/gist/%s';
+    public $rawurl  = 'https://raw.github.com/gist/%s';
     public $jsonurl = 'https://gist.github.com/%s.json';
-    public $params = array();
+    public $params  = array();
     
 	/**
 	 * Constructor
 	 */
 	public function __construct() {
-		$this->EE =& get_instance();
+
+        $this->EE =& get_instance();
         $config = $this->EE->config;
         
-        $this->params['id'] = $this->_param('id', FALSE, FALSE, TRUE);
-        $this->params['markdown'] = $this->_param('markdown', FALSE, TRUE);
-        $this->params['showtitle'] = $this->_param('showtitle', TRUE, TRUE);
-        $this->params['showcite'] = $this->_param('showcite', TRUE, TRUE);
+        $this->params['id']         = $this->_param('id', FALSE, FALSE, TRUE);
+        $this->params['markdown']   = $this->_param('markdown', FALSE, TRUE);
+        $this->params['theme']      = $this->_param('theme', 'github', FALSE);
+        $this->params['showtitle']  = $this->_param('showtitle', TRUE, TRUE);
+        $this->params['showcite']   = $this->_param('showcite', TRUE, TRUE);
 
-        
         } // end public function __construct()
     
 
     public function gist() {
-        $embedcall = file_get_contents(sprintf($this->rawurl,  $this->params['id'])); // Don't be afraid of sprintf!
-        $metadata  = file_get_contents(sprintf($this->jsonurl, $this->params['id'])); 
-        $metadata = json_decode($metadata,TRUE);
+        if($this->params['id']) {
         
-        $giststring = '';
-       
-        if(TRUE == $this->params['markdown']) {
-            $giststring = "<div id=\"gist-".$this->params['id']."\" class=\"gist\">\n<div class=\"gist-file\">\n";
-            $giststring .= "<div class=\"gist-data\">\n<div class=\"highlight gist-markdown\">".MarkdownExtended($embedcall)."\n</div>\n</div>";
-            }
-        else {
-            $giststring = $metadata['div'];
-            $giststring = substr($giststring,0,strpos($giststring,'<div class="gist-meta">'));
-            }
+            $embedcall = file_get_contents(sprintf($this->rawurl,  $this->params['id'])); // Don't be afraid of sprintf!
+            $metadata  = file_get_contents(sprintf($this->jsonurl, $this->params['id'])); 
+                         $metadata = json_decode($metadata,TRUE);
+            $giststring = '';
+            $citation = '';
+           
+            if(TRUE == $this->params['markdown']) {
+                $gistfill   =  '
+                    <div id="gist-%s" class="gist">
+                      <div class="gist-file">
+                        <div class="gist-data">
+                          <div class="highlight gist-markdown">
+                    %s
+                          </div>
+                        </div><!-- end .gist-data -->
+                    ';            
+                $giststring =  sprintf($gistfill,$this->params['id'],MarkdownExtended($embedcall));
+                }
+            else {
+                $giststring = $metadata['div'];
+                $giststring = substr($giststring,0,strpos($giststring,'<div class="gist-meta">'));
+                }
 
-
-        $citation = '';
-
-        if(TRUE == $this->params['showcite']) {
-            $href = '<a href="https://gist.github.com/'.$this->params['id'].'">This Gist</a>';
-            $owner = ' is owned by <a href="https://github.com/'.$metadata['owner'].'">'.$metadata['owner'].'</a> and ';
-            $citation = "\n\n<div class=\"gist-meta\">$href $owner brought to you by <a href=\"http://github.com\">GitHub.com</a></div>\n";
+            if(TRUE == $this->params['showcite']) {
+                $cstring    =  '
+                        <div class="gist-meta">
+                          <a href="https://gist.github.com/%s">This Gist</a> is owned by <a href="https://github.com/%s">%s</a>
+                          and brought to you by <a href="http://github.com">GitHub.com</a>
+                        </div><!-- end .gist-meta -->
+                    ';
+                $citation   =  sprintf($cstring,$this->params['id'],$metadata['owner'],$metadata['owner']);
+                }
+            
+            $returnstring = $giststring.$citation."\n  </div><!-- end .gist-file -->\n</div><!-- end .gist -->";
+            
+            return $returnstring;
+            
             }
-        
-        $returnstring = $giststring.$citation."\n</div>\n</div>";
-        
-        return $returnstring;
-       
         } // end public function gist()
     
     
     public function csslink() {
-        $returncss = '<style type="text/css">'."\n";
-        $returncss .= '@import url(https://gist.github.com/stylesheets/gist/embed.css);'."\n";
-        $returncss .= '.gist .gist-markdown { padding: 0 10px; font-family: sans-serif; font-size: 14px; }'."\n";
-        $returncss .= '.gist .gist-markdown code { font-size: 100%; font-family: Consolas, "DejaVu Mono", monospace; }'."\n";
-        $returncss .= '.gist .gist-syntax pre, .gist .gist-syntax pre div { font-size: 14px; font-family: Consolas, "DejaVu Mono", monospace; }'."\n";
-        $returncss .= '</style>'."\n";
-        
+        $returncss  = '
+            <style type="text/css">
+            @import url(https://gist.github.com/stylesheets/gist/embed.css);
+            .gist .gist-markdown { padding: 0 10px; font-family: sans-serif; font-size: 14px; }
+            .gist .gist-markdown code { font-size: 100%; font-family: Consolas, "DejaVu Mono", monospace; }
+            .gist .gist-syntax pre, .gist .gist-syntax pre div { font-size: 14px; font-family: Consolas, "DejaVu Mono", monospace; }
+            </style>
+            ';
         return $returncss;
         } // end public function csslink()
     
     /* Thanks to ObjectiveHTML for this function! see https://gist.github.com/1478635 for details! */
     private function _param($param, $default = FALSE, $boolean = FALSE, $required = FALSE) {
-            if($required && !$param) show_error('You must define a "'.$param.'" parameter in the '.__CLASS__.' tag.');
+            if($required && !$param) show_error(sprintf('You must define a %s parameter in the %s tag.',$param,__CLASS__));
 
             $param = $this->EE->TMPL->fetch_param($param);
 
-            if(FALSE === $param && FALSE !== $default)
-            {
+            if(FALSE === $param && FALSE !== $default) {
                 $param = $default;
-            }
-            else
-            {				
-                if($boolean)
-                {
+                }
+            else {				
+                if($boolean) {
                     $param = strtolower($param);
                     $param = ('true' == $param || 'yes' == $param || 'TRUE' == $param || 'YES' == $param) ? TRUE : FALSE;
-                }			
-            }
+                    }			
+                }
 
             return $param;			
         } // end private function _param($param, $default, $boolean, $required)
